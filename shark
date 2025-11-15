@@ -1,0 +1,115 @@
+-- Script de Shift Lock para Mobile (Botão Pequeno)
+-- Compatível com dispositivos móveis
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+-- Variável para controlar o estado do shift lock
+local shiftLockEnabled = false
+
+-- Função para ativar/desativar shift lock
+local function toggleShiftLock()
+    shiftLockEnabled = not shiftLockEnabled
+    
+    if shiftLockEnabled then
+        -- Ativar shift lock
+        humanoid.AutoRotate = false
+        
+        -- Loop para manter a rotação do personagem alinhada com a câmera
+        RunService.RenderStepped:Connect(function()
+            if shiftLockEnabled and humanoidRootPart then
+                local camera = workspace.CurrentCamera
+                local cameraDirection = camera.CFrame.LookVector
+                local newCFrame = CFrame.new(humanoidRootPart.Position, humanoidRootPart.Position + Vector3.new(cameraDirection.X, 0, cameraDirection.Z))
+                humanoidRootPart.CFrame = newCFrame
+            end
+        end)
+        
+        print("Shift Lock ATIVADO")
+    else
+        -- Desativar shift lock
+        humanoid.AutoRotate = true
+        print("Shift Lock DESATIVADO")
+    end
+end
+
+-- Criar botão GUI pequeno para mobile
+local ScreenGui = Instance.new("ScreenGui")
+local ShiftLockButton = Instance.new("TextButton")
+
+ScreenGui.Name = "ShiftLockGui"
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+ShiftLockButton.Name = "ShiftLockButton"
+ShiftLockButton.Parent = ScreenGui
+ShiftLockButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+ShiftLockButton.BackgroundTransparency = 0.3
+ShiftLockButton.Position = UDim2.new(0.92, 0, 0.5, 0)
+ShiftLockButton.Size = UDim2.new(0, 45, 0, 45) -- Botão menor (45x45)
+ShiftLockButton.Font = Enum.Font.SourceSansBold
+ShiftLockButton.Text = "🔒"
+ShiftLockButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ShiftLockButton.TextSize = 20 -- Texto menor
+
+-- Adicionar borda arredondada
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0.25, 0)
+UICorner.Parent = ShiftLockButton
+
+-- Evento de clique no botão
+ShiftLockButton.MouseButton1Click:Connect(function()
+    toggleShiftLock()
+    
+    -- Mudar cor do botão baseado no estado
+    if shiftLockEnabled then
+        ShiftLockButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+    else
+        ShiftLockButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+end)
+
+-- Permitir que o botão seja arrastado
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    ShiftLockButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+ShiftLockButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = ShiftLockButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+ShiftLockButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+print("Script de Shift Lock Mobile carregado!")
